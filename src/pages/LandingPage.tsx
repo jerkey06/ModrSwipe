@@ -26,18 +26,30 @@ export const LandingPage: React.FC = () => {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="w-24 h-24 bg-green-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg"
             >
-              <Gamepad2 className="w-12 h-12 text-white" />
+              <img src="public/ModrSwipe_logo.png" alt="ModrSwipe" />
             </motion.div>
-            
-            <h1 className="text-6xl md:text-8xl font-bold text-green-800 mb-4 tracking-tight">
-              ModrSwipe
-            </h1>
-            
-            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl text-white mb-8 max-w-2xl mx-auto">
               Swipe mods with friends and vote for the best modpack
             </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+            <Button
+              size="lg"
+              onClick={() => navigate('/room/create')}
+              className="minecraft-btn px-8 py-4 text-lg"
+            >
+              Create Room
+            </Button>
+            <Button
+              size="lg"
+              variant="secondary"
+              onClick={() => navigate('/room/join')}
+              className="px-8 py-4 text-lg"
+            >
+              Join Roo
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -64,24 +76,6 @@ export const LandingPage: React.FC = () => {
                 Get collective results and download your perfect modpack
               </p>
             </Card>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              onClick={() => navigate('/room/create')}
-              className="px-8 py-4 text-lg"
-            >
-              Create Room
-            </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={() => navigate('/room/join')}
-              className="px-8 py-4 text-lg"
-            >
-              Join Room
-            </Button>
           </div>
         </motion.div>
       </div>
