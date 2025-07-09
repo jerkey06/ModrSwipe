@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Gamepad2, Users, Sparkles } from 'lucide-react';
-import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import Panorama from '../components/layout/Panorama';
@@ -13,7 +12,6 @@ export const LandingPage: React.FC = () => {
   return (
     <>
       <Panorama />
-    <Layout showHeader={false}>
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -27,7 +25,7 @@ export const LandingPage: React.FC = () => {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <img src="public/ModrSwipe_logo.png" alt="ModrSwipe" />
+              <img src="public/logos/ModrSwipe_logo.png" alt="ModrSwipe" />
             </motion.div>
             <p className="text-xl md:text-2xl text-[#F2E205] drop-shadow-[2px_2px_0_#403C01] mb-8 max-w-2xl mx-auto">
               Swipe mods with friends and vote for the best modpack
@@ -79,7 +77,6 @@ export const LandingPage: React.FC = () => {
           </div>
         </motion.div>
       </div>
-    </Layout>
     </>
   );
 };

@@ -11,18 +11,26 @@ export const Layout: React.FC<LayoutProps> = ({
   showHeader = true 
 }) => {
   return (
-    <div className="min-h-screen" style={{ background: 'transparent' }}>
+    <div
+      className="min-h-screen relative"
+      style={{
+        backgroundImage: 'url(/backgrounds/Dirt_background_JE2.webp)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       {showHeader && (
-        <header className="bg-white shadow-sm border-b border-gray-200">
+        <header className="bg-white shadow-sm border-b border-gray-200 bg-opacity-90 backdrop-blur">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <motion.h1 
-                className="text-2xl font-bold text-green-800"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+              <a
+                href="/"
+                className="text-2xl font-bold text-green-800 transition-colors hover:text-green-600"
+                aria-label="Ir al menú principal"
               >
                 ModrSwipe
-              </motion.h1>
+              </a>
             </div>
           </div>
         </header>
