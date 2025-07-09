@@ -5,11 +5,14 @@ import { Gamepad2, Users, Sparkles } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import Panorama from '../components/layout/Panorama';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
+    <>
+      <Panorama />
     <Layout showHeader={false}>
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         <motion.div
@@ -83,5 +86,6 @@ export const LandingPage: React.FC = () => {
         </motion.div>
       </div>
     </Layout>
+    </>
   );
 };
