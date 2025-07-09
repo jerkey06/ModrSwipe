@@ -15,18 +15,34 @@ export const Input: React.FC<InputProps> = ({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           {label}
         </label>
       )}
       <input
         className={cn(
-          'w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm',
-          'focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500',
-          'disabled:bg-gray-50 disabled:cursor-not-allowed',
-          error && 'border-red-500 focus:ring-red-500 focus:border-red-500',
+          'w-full px-3 py-2',
+          'border-4 border-[#595B65]', // Borde exterior oscuro
+          'rounded-none',
+          'bg-[#010100]',
+          'text-[#E1E0E1]',
+          'focus:border-[#E1E0E1]', // Borde exterior se ilumina en foco
+          'focus:outline-none',
+          'text-base', // Tamaño de fuente original
+          'shadow-none',
+          'disabled:bg-[#222]',
+          error && 'border-red-500 focus:border-red-500',
           className
         )}
+        style={{
+          // Estilos de la fuente eliminados
+          // boxShadow: 'inset 0 0 0 2px #595B65', // ¡ELIMINADO! Quita el "borde interior más claro"
+          caretColor: '#E1E0E1',
+          textShadow: '2px 2px 0 #393938', // ¡ELIMINADO! Quita la sombra de texto del input
+          ...props.style,
+        }}
         {...props}
       />
       {error && (
