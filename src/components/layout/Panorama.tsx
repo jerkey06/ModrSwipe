@@ -28,7 +28,7 @@ const Panorama = () => {
 
     const animate = () => {
       requestAnimationFrame(animate);
-      camera.rotation.y += 0.0001; // Rotación automática
+      camera.rotation.y += 0.0005; // Rotación automática
       renderer.render(scene, camera);
     };
     animate();
