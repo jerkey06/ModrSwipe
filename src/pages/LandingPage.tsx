@@ -29,7 +29,7 @@ export const LandingPage: React.FC = () => {
             >
               <img src="public/ModrSwipe_logo.png" alt="ModrSwipe" />
             </motion.div>
-            <p className="text-xl md:text-2xl text-white mb-8 max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl text-[#F2E205] drop-shadow-[2px_2px_0_#403C01] mb-8 max-w-2xl mx-auto">
               Swipe mods with friends and vote for the best modpack
             </p>
           </div>
@@ -38,7 +38,7 @@ export const LandingPage: React.FC = () => {
             <Button
               size="lg"
               onClick={() => navigate('/room/create')}
-              className="minecraft-btn px-8 py-4 text-lg"
+              className="px-8 py-4 text-lg"
             >
               Create Room
             </Button>
