@@ -24,23 +24,21 @@ export const Input: React.FC<InputProps> = ({
       <input
         className={cn(
           'w-full px-3 py-2',
-          'border-4 border-[#595B65]', // Borde exterior oscuro
+          'border-4 border-[#595B65]',
           'rounded-none',
           'bg-[#010100]',
           'text-[#E1E0E1]',
-          'focus:border-[#E1E0E1]', // Borde exterior se ilumina en foco
+          'focus:border-[#E1E0E1]',
           'focus:outline-none',
-          'text-base', // Tamaño de fuente original
+          'text-base',
           'shadow-none',
           'disabled:bg-[#222]',
           error && 'border-red-500 focus:border-red-500',
           className
         )}
         style={{
-          // Estilos de la fuente eliminados
-          // boxShadow: 'inset 0 0 0 2px #595B65', // ¡ELIMINADO! Quita el "borde interior más claro"
           caretColor: '#E1E0E1',
-          textShadow: '2px 2px 0 #393938', // ¡ELIMINADO! Quita la sombra de texto del input
+          textShadow: '2px 2px 0 #393938',
           ...props.style,
         }}
         {...props}
