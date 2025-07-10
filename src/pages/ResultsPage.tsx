@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Download, RotateCcw, Trophy, X, Scale } from 'lucide-react';
@@ -6,96 +6,68 @@ import { Layout } from '../components/layout/Layout';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { useAppStore } from '../store/useAppStore';
+import { modService } from '../services/modService';
+import { voteService } from '../services/voteService';
+import { Mod, Vote } from '../types';
+
+interface Result { 
+    approved: any[];
+    rejected: any[];
+    controversial: any[];
+}
 
 export const ResultsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const { user, room, mods, votes } = useAppStore();
+  const { id: roomId } = useParams<{ id: string }>();
+  const { user, room } = useAppStore();
+  const [results, setResults] = useState<Result | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const results = useMemo(() => {
-    const modVotes: Record<string, { likes: number; dislikes: number; mod: any }> = {};
-    
-    // Initialize vote counts
-    mods.proposed.forEach(mod => {
-      modVotes[mod.id] = { likes: 0, dislikes: 0, mod };
-    });
-    
-    // Count votes
-    Object.values(votes).forEach(vote => {
-      if (modVotes[vote.modId]) {
-        if (vote.vote === 'like') {
-          modVotes[vote.modId].likes++;
-        } else {
-          modVotes[vote.modId].dislikes++;
-        }
+  useEffect(() => {
+    if (!roomId) return;
+
+    const fetchResults = async () => {
+      try {
+        const [mods, votes] = await Promise.all([
+          modService.getRoomMods(roomId),
+          voteService.getRoomVotes(roomId),
+        ]);
+        
+        const calculatedResults = voteService.calculateResults(mods, votes as Vote[]);
+        setResults(calculatedResults);
+      } catch (error) {
+        console.error("Error fetching results:", error);
+      } finally {
+        setIsLoading(false);
       }
-    });
-    
-    // Categorize results
-    const approved = Object.values(modVotes)
-      .filter(result => result.likes > result.dislikes)
-      .sort((a, b) => b.likes - a.likes);
-    
-    const rejected = Object.values(modVotes)
-      .filter(result => result.likes < result.dislikes)
-      .sort((a, b) => b.dislikes - a.dislikes);
-    
-    const controversial = Object.values(modVotes)
-      .filter(result => result.likes === result.dislikes)
-      .sort((a, b) => b.likes - a.likes);
-    
-    return { approved, rejected, controversial };
-  }, [mods.proposed, votes]);
+    };
+
+    fetchResults();
+  }, [roomId]);
 
   const handleDownloadResults = () => {
+    if (!results || !room) return;
+
     const resultsData = {
-      room: room?.id,
+      room: room.id,
       timestamp: new Date().toISOString(),
       results: {
-        approved: results.approved.map(r => ({
-          name: r.mod.name,
-          url: r.mod.url,
-          likes: r.likes,
-          dislikes: r.dislikes,
-        })),
-        rejected: results.rejected.map(r => ({
-          name: r.mod.name,
-          url: r.mod.url,
-          likes: r.likes,
-          dislikes: r.dislikes,
-        })),
-        controversial: results.controversial.map(r => ({
-          name: r.mod.name,
-          url: r.mod.url,
-          likes: r.likes,
-          dislikes: r.dislikes,
-        })),
+        approved: results.approved.map(r => ({ name: r.name, url: r.url, likes: r.likes, dislikes: r.dislikes })),
+        rejected: results.rejected.map(r => ({ name: r.name, url: r.url, likes: r.likes, dislikes: r.dislikes })),
+        controversial: results.controversial.map(r => ({ name: r.name, url: r.url, likes: r.likes, dislikes: r.dislikes })),
       },
     };
     
-    const blob = new Blob([JSON.stringify(resultsData, null, 2)], {
-      type: 'application/json',
-    });
-    
+    const blob = new Blob([JSON.stringify(resultsData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `modpack-results-${room?.id || 'session'}.json`;
+    a.download = `modpack-results-${room.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const ResultCard = ({ 
-    result, 
-    icon, 
-    iconColor, 
-    index 
-  }: { 
-    result: any; 
-    icon: React.ReactNode; 
-    iconColor: string; 
-    index: number; 
-  }) => (
+  const ResultCard = ({ result, icon, iconColor, index }: { result: any; icon: React.ReactNode; iconColor: string; index: number; }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -107,8 +79,8 @@ export const ResultsPage: React.FC = () => {
           {icon}
         </div>
         <div className="flex-1">
-          <h4 className="font-medium text-gray-900">{result.mod.name}</h4>
-          <p className="text-sm text-gray-600 mt-1">{result.mod.description}</p>
+          <h4 className="font-medium text-gray-900">{result.name}</h4>
+          <p className="text-sm text-gray-600 mt-1">{result.description}</p>
           <div className="flex items-center gap-4 mt-2 text-sm">
             <span className="text-green-600">👍 {result.likes}</span>
             <span className="text-red-600">👎 {result.dislikes}</span>
@@ -118,11 +90,21 @@ export const ResultsPage: React.FC = () => {
     </motion.div>
   );
 
-  if (!user || !room) {
+  if (isLoading) {
     return (
       <Layout>
         <div className="text-center">
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Calculating results...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!results) {
+    return (
+      <Layout>
+        <div className="text-center">
+          <p className="text-gray-600">Could not load results.</p>
         </div>
       </Layout>
     );

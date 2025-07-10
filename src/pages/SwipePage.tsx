@@ -1,64 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import TinderCard from 'react-tinder-card';
-import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { useAppStore } from '../store/useAppStore';
+import { modService } from '../services/modService';
+import { voteService } from '../services/voteService';
+import { Mod } from '../types';
 
 export const SwipePage: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const { user, room, mods, setCurrentMod, addVote } = useAppStore();
+  const { id: roomId } = useParams<{ id: string }>();
+  const { user, room, mods, setMods, addVote } = useAppStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lastDirection, setLastDirection] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (mods.proposed.length > 0) {
-      setCurrentMod(mods.proposed[0], 0);
-    }
-  }, [mods.proposed, setCurrentMod]);
+    if (!roomId) return;
 
-  const handleSwipe = (direction: string, mod: any) => {
-    if (!user || !room) return;
-
-    const vote = {
-      id: `vote_${Date.now()}`,
-      roomId: room.id,
-      modId: mod.id,
-      userId: user.uid,
-      vote: direction === 'right' ? 'like' as const : 'dislike' as const,
+    const fetchMods = async () => {
+      try {
+        const proposedMods = await modService.getRoomMods(roomId);
+        setMods({ ...mods, proposed: proposedMods });
+      } catch (error) {
+        console.error("Error fetching mods:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    addVote(vote);
+    fetchMods();
+  }, [roomId, setMods]);
+
+  const swiped = (direction: string, mod: Mod) => {
+    if (!user || !roomId) return;
+
+    const voteType = direction === 'right' ? 'like' : 'dislike';
+    voteService.submitVote(roomId, mod.id, user.uid, voteType);
+    addVote({ modId: mod.id, vote: voteType });
     setLastDirection(direction);
 
     const nextIndex = currentIndex + 1;
-    if (nextIndex < mods.proposed.length) {
-      setCurrentIndex(nextIndex);
-      setCurrentMod(mods.proposed[nextIndex], nextIndex);
-    } else {
-      // All mods voted, go to results
-      navigate(`/room/${id}/results`);
+    setCurrentIndex(nextIndex);
+
+    if (nextIndex >= mods.proposed.length) {
+      navigate(`/room/${roomId}/results`);
     }
   };
 
-  const handleButtonClick = (direction: 'left' | 'right') => {
-    if (mods.current) {
-      handleSwipe(direction, mods.current);
+  const swipe = (dir: 'left' | 'right') => {
+    const cardsLeft = mods.proposed.filter(m => !mods.votes[m.id]);
+    if (cardsLeft.length > 0) {
+      const modToSwipe = cardsLeft[0];
+      swiped(dir, modToSwipe);
     }
   };
 
   const progress = mods.proposed.length > 0 ? 
-    ((currentIndex + 1) / mods.proposed.length) * 100 : 0;
+    (currentIndex / mods.proposed.length) * 100 : 0;
 
-  if (!user || !room) {
+  if (isLoading) {
     return (
       <Layout>
         <div className="text-center">
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Loading mods...</p>
         </div>
       </Layout>
     );
@@ -73,15 +82,37 @@ export const SwipePage: React.FC = () => {
               No Mods to Vote On
             </h2>
             <p className="text-gray-600 mb-6">
-              There are no mods proposed for this room yet.
+              The voting session hasn't started or there are no mods.
             </p>
-            <Button onClick={() => navigate(`/room/${id}/lobby`)}>
+            <Button onClick={() => navigate(`/room/${roomId}/lobby`)}>
               Back to Lobby
             </Button>
           </Card>
         </div>
       </Layout>
     );
+  }
+  
+  const card = mods.proposed[currentIndex];
+
+  if (!card) {
+    return (
+        <Layout>
+          <div className="text-center">
+            <Card className="max-w-md mx-auto">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Voting Finished!
+              </h2>
+              <p className="text-gray-600 mb-6">
+                You have voted on all the mods.
+              </p>
+              <Button onClick={() => navigate(`/room/${roomId}/results`)}>
+                Go to Results
+              </Button>
+            </Card>
+          </div>
+        </Layout>
+      );
   }
 
   return (
@@ -106,38 +137,34 @@ export const SwipePage: React.FC = () => {
 
         {/* Swipe Cards */}
         <div className="relative h-96 flex items-center justify-center">
-          {mods.proposed.slice(currentIndex, currentIndex + 2).map((mod, index) => (
             <TinderCard
-              key={mod.id}
-              onSwipe={(dir) => handleSwipe(dir, mod)}
+              key={card.id}
+              onSwipe={(dir) => swiped(dir, card)}
               preventSwipe={['up', 'down']}
               className="absolute w-full max-w-sm"
             >
-              <div className={`${index === 0 ? 'z-10' : 'z-0'}`}>
-                <Card className="cursor-grab active:cursor-grabbing">
-                  <div className="space-y-4">
-                    {mod.image && (
-                      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                        <img 
-                          src={mod.image} 
-                          alt={mod.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="text-center space-y-2">
-                      <h3 className="text-xl font-bold text-gray-900">{mod.name}</h3>
-                      <p className="text-gray-600">{mod.description}</p>
-                      <p className="text-sm text-gray-500">
-                        Proposed by {mod.proposedBy}
-                      </p>
+              <Card className="cursor-grab active:cursor-grabbing">
+                <div className="space-y-4">
+                  {card.image && (
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img 
+                        src={card.image} 
+                        alt={card.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
+                  )}
+                  
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold text-gray-900">{card.name}</h3>
+                    <p className="text-gray-600">{card.description}</p>
+                    <p className="text-sm text-gray-500">
+                      Proposed by {card.proposedBy}
+                    </p>
                   </div>
-                </Card>
-              </div>
+                </div>
+              </Card>
             </TinderCard>
-          ))}
         </div>
 
         {/* Swipe Buttons */}
@@ -145,7 +172,7 @@ export const SwipePage: React.FC = () => {
           <Button
             variant="danger"
             size="lg"
-            onClick={() => handleButtonClick('left')}
+            onClick={() => swipe('left')}
             className="w-16 h-16 rounded-full flex items-center justify-center"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -154,7 +181,7 @@ export const SwipePage: React.FC = () => {
           <Button
             variant="success"
             size="lg"
-            onClick={() => handleButtonClick('right')}
+            onClick={() => swipe('right')}
             className="w-16 h-16 rounded-full flex items-center justify-center"
           >
             <ArrowRight className="w-6 h-6" />

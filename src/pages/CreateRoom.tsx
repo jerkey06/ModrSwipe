@@ -7,6 +7,8 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useAppStore } from '../store/useAppStore';
+import { authService } from '../services/authService';
+import roomService from '../services/roomService';
 
 export const CreateRoom: React.FC = () => {
   const navigate = useNavigate();
@@ -16,39 +18,42 @@ export const CreateRoom: React.FC = () => {
   const [roomCode, setRoomCode] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const generateRoomCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
-
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nickname.trim()) return;
 
     setIsCreating(true);
-    
-    // Simulate room creation
-    const newRoomCode = generateRoomCode();
-    const userId = `user_${Date.now()}`;
-    
-    const user = {
-      uid: userId,
-      nickname: nickname.trim(),
-      isAnonymous: true,
-    };
-    
-    const room = {
-      id: newRoomCode,
-      hostId: userId,
-      isHost: true,
-      players: [user],
-      status: 'lobby' as const,
-      createdAt: new Date(),
-    };
-    
-    setUser(user);
-    setRoom(room);
-    setRoomCode(newRoomCode);
-    setIsCreating(false);
+
+    try {
+      let user = authService.getCurrentUser();
+      if (!user) {
+        user = await authService.signInAnonymous();
+      }
+
+      const userData = {
+        uid: user.uid,
+        nickname: nickname.trim(),
+        isAnonymous: user.isAnonymous,
+      };
+      
+      setUser(userData);
+
+      const newRoom = await roomService.createRoom(user.uid, nickname.trim());
+      
+      setRoom({
+        ...newRoom,
+        isHost: true,
+        players: [userData],
+        status: 'lobby',
+      });
+
+      setRoomCode(newRoom.roomId);
+    } catch (error) {
+      console.error("Error creating room:", error);
+      // Aquí podrías mostrar un mensaje de error al usuario
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleCopyCode = async () => {

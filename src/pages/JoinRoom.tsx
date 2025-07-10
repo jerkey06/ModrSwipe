@@ -5,6 +5,8 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useAppStore } from '../store/useAppStore';
+import { authService } from '../services/authService';
+import roomService from '../services/roomService';
 
 export const JoinRoom: React.FC = () => {
   const navigate = useNavigate();
@@ -18,37 +20,36 @@ export const JoinRoom: React.FC = () => {
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nickname.trim() || !formData.roomCode.trim()) return;
+    const { nickname, roomCode } = formData;
+    if (!nickname.trim() || !roomCode.trim()) return;
 
     setIsJoining(true);
     setError('');
     
     try {
-      // Simulate room joining
-      const userId = `user_${Date.now()}`;
-      
-      const user = {
-        uid: userId,
-        nickname: formData.nickname.trim(),
-        isAnonymous: true,
+      let user = authService.getCurrentUser();
+      if (!user) {
+        user = await authService.signInAnonymous();
+      }
+
+      const roomData = await roomService.joinRoom(roomCode.toUpperCase(), user.uid, nickname.trim());
+
+      const userData = {
+        uid: user.uid,
+        nickname: nickname.trim(),
+        isAnonymous: user.isAnonymous,
       };
+
+      setUser(userData);
+      setRoom({
+        ...roomData,
+        id: roomCode.toUpperCase(),
+        isHost: false, // Un usuario que se une nunca es el host
+      });
       
-      // In a real app, you would fetch the room data from Firebase
-      const room = {
-        id: formData.roomCode.toUpperCase(),
-        hostId: 'host_id', // Would be fetched from Firebase
-        isHost: false,
-        players: [user], // Would include existing players
-        status: 'lobby' as const,
-        createdAt: new Date(),
-      };
-      
-      setUser(user);
-      setRoom(room);
-      
-      navigate(`/room/${formData.roomCode.toUpperCase()}/lobby`);
-    } catch (err) {
-      setError('Failed to join room. Please check the room code.');
+      navigate(`/room/${roomCode.toUpperCase()}/lobby`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to join room. Please check the room code.');
     } finally {
       setIsJoining(false);
     }

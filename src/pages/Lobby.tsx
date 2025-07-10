@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Copy, Check } from 'lucide-react';
@@ -7,48 +7,60 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { PlayerList } from '../components/features/PlayerList';
 import { ModProposalForm } from '../components/features/ModProposalForm';
-import { ModCard } from '../components/features/ModCard';
 import { useAppStore } from '../store/useAppStore';
+import roomService from '../services/roomService';
+import { modService } from '../services/modService';
+import { Mod } from '../types';
 
 export const Lobby: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const { user, room, mods, setMods } = useAppStore();
+  const { id: roomId } = useParams<{ id: string }>();
+  const { user, room, setRoom, mods, setMods } = useAppStore();
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (!roomId) return;
+
+    const unsubscribePlayers = roomService.onPlayersChanged(roomId, (players) => {
+      setRoom({ ...room!, players });
+    });
+
+    const unsubscribeMods = modService.onModsChanged(roomId, (proposedMods) => {
+      setMods({ ...mods, proposed: proposedMods });
+    });
+
+    return () => {
+      unsubscribePlayers();
+      unsubscribeMods();
+    };
+  }, [roomId, setRoom, setMods]);
+
   const handleCopyRoomCode = async () => {
-    if (id) {
-      await navigator.clipboard.writeText(id);
+    if (roomId) {
+      await navigator.clipboard.writeText(roomId);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const handleModProposal = (modData: {
-    name: string;
-    url?: string;
-    description: string;
-    image?: string;
-  }) => {
-    if (!user || !room) return;
+  const handleModProposal = async (modData: Omit<Mod, 'id' | 'proposedBy' | 'createdAt' | 'roomId'>) => {
+    if (!user || !roomId) return;
     
-    const newMod = {
-      id: `mod_${Date.now()}`,
-      roomId: room.id,
-      name: modData.name,
-      url: modData.url,
-      description: modData.description,
-      image: modData.image,
-      proposedBy: user.nickname,
-      createdAt: new Date(),
-    };
-    
-    setMods([...mods.proposed, newMod]);
+    try {
+      await modService.proposeMod(roomId, user.uid, modData);
+    } catch (error) {
+      console.error("Error proposing mod:", error);
+    }
   };
 
-  const handleStartVoting = () => {
-    if (mods.proposed.length > 0) {
-      navigate(`/room/${id}/swipe`);
+  const handleStartVoting = async () => {
+    if (mods.proposed.length > 0 && roomId) {
+      try {
+        await roomService.updateRoomStatus(roomId, 'swiping');
+        navigate(`/room/${roomId}/swipe`);
+      } catch (error) {
+        console.error("Error starting voting:", error);
+      }
     }
   };
 
