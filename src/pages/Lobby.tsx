@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import { PlayerList } from '../components/features/PlayerList';
 import { ModProposalForm } from '../components/features/ModProposalForm';
 import { useAppStore } from '../store/useAppStore';
-import roomService from '../services/roomService';
+import { roomService } from '../services/roomService';
 import { modService } from '../services/modService';
 import { Mod } from '../types';
 

@@ -8,7 +8,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useAppStore } from '../store/useAppStore';
 import { authService } from '../services/authService';
-import roomService from '../services/roomService';
+import { roomService } from '../services/roomService';
 
 export const CreateRoom: React.FC = () => {
   const navigate = useNavigate();
