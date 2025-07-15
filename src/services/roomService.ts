@@ -211,7 +211,14 @@ export const roomService: RoomServiceInterface = {
         callback([]);
       });
       
-      return () => off(playersRef);
+      // Return proper cleanup function that removes the specific listener
+      return () => {
+        try {
+          off(playersRef, unsubscribe);
+        } catch (error) {
+          console.error('Error removing players listener:', error);
+        }
+      };
     } catch (error) {
       console.error('Error setting up players listener:', error);
       // Return a no-op cleanup function if setup fails

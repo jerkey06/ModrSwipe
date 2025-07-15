@@ -25,10 +25,23 @@ export const Lobby: React.FC = () => {
     setLoading('room', true);
     setLoading('mods', true);
 
+    // Track if component is still mounted to prevent state updates after unmount
+    let isMounted = true;
+
+    // Setup players listener with proper error handling
     const unsubscribePlayers = roomService.onPlayersChanged(roomId, (players: any) => {
+      // Only update state if component is still mounted
+      if (!isMounted) return;
+      
       // Defensive check: ensure players is an array
-      if (Array.isArray(players) && room) {
-        setRoom({ ...room, players });
+      if (Array.isArray(players)) {
+        // Update room with new players data, preserving existing room data
+        setRoom((currentRoom) => {
+          if (currentRoom) {
+            return { ...currentRoom, players };
+          }
+          return currentRoom;
+        });
         setLoading('room', false);
       } else {
         console.warn('Invalid players data received:', players);
@@ -36,7 +49,11 @@ export const Lobby: React.FC = () => {
       }
     });
 
+    // Setup mods listener with proper error handling
     const unsubscribeMods = modService.onModsChanged(roomId, (proposedMods: any) => {
+      // Only update state if component is still mounted
+      if (!isMounted) return;
+      
       // Defensive check: ensure proposedMods is an array before calling setMods
       if (Array.isArray(proposedMods)) {
         setMods(proposedMods);
@@ -47,11 +64,28 @@ export const Lobby: React.FC = () => {
       setLoading('mods', false);
     });
 
+    // Cleanup function with proper listener cleanup
     return () => {
-      unsubscribePlayers();
-      unsubscribeMods();
+      isMounted = false;
+      
+      // Ensure cleanup functions exist before calling them
+      if (typeof unsubscribePlayers === 'function') {
+        try {
+          unsubscribePlayers();
+        } catch (error) {
+          console.error('Error cleaning up players listener:', error);
+        }
+      }
+      
+      if (typeof unsubscribeMods === 'function') {
+        try {
+          unsubscribeMods();
+        } catch (error) {
+          console.error('Error cleaning up mods listener:', error);
+        }
+      }
     };
-  }, [roomId, room, setRoom, setMods, setLoading]);
+  }, [roomId, setRoom, setMods, setLoading]); // Removed 'room' from dependencies to prevent unnecessary re-runs
 
   const handleCopyRoomCode = async () => {
     if (roomId) {

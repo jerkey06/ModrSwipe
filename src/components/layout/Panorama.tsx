@@ -26,14 +26,22 @@ const Panorama = () => {
 
     camera.position.z = 1;
 
+    // Track animation frame ID for proper cleanup
+    let animationFrameId: number;
+    let isMounted = true;
+
     const animate = () => {
-      requestAnimationFrame(animate);
+      if (!isMounted) return;
+      
+      animationFrameId = requestAnimationFrame(animate);
       camera.rotation.y += 0.0005; // Rotación automática
       renderer.render(scene, camera);
     };
     animate();
 
     const onResize = () => {
+      if (!isMounted) return;
+      
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -42,8 +50,33 @@ const Panorama = () => {
     window.addEventListener("resize", onResize);
 
     return () => {
+      isMounted = false;
+      
+      // Cancel animation frame
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      
+      // Remove event listener
       window.removeEventListener("resize", onResize);
-      containerRef.current?.removeChild(renderer.domElement);
+      
+      // Properly dispose of Three.js resources
+      if (texture) {
+        texture.dispose();
+      }
+      
+      if (renderer) {
+        renderer.dispose();
+        // Remove renderer DOM element safely
+        if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
+          containerRef.current.removeChild(renderer.domElement);
+        }
+      }
+      
+      // Clear scene
+      if (scene) {
+        scene.clear();
+      }
     };
   }, []);
 

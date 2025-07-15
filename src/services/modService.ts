@@ -139,7 +139,14 @@ export const modService: ModServiceInterface = {
         callback([]);
       });
       
-      return () => off(modsRef);
+      // Return proper cleanup function that removes the specific listener
+      return () => {
+        try {
+          off(modsRef, unsubscribe);
+        } catch (error) {
+          console.error('Error removing mods listener:', error);
+        }
+      };
     } catch (error) {
       console.error('Error setting up mods listener:', error);
       // Return a no-op cleanup function if setup fails
