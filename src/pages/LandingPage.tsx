@@ -25,7 +25,7 @@ export const LandingPage: React.FC = () => {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <img src="/logos/MdodrSwipe_logo.png" alt="ModrSwipe" />
+              <img src="/logos/ModrSwipe_logo.png" alt="ModrSwipe" />
             </motion.div>
             <p className="text-xl md:text-2xl text-[#F2E205] drop-shadow-[2px_2px_0_#403C01] mb-8 max-w-2xl mx-auto">
               Swipe mods with friends and vote for the best modpack
