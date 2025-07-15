@@ -80,7 +80,24 @@ export const ModProposalForm: React.FC<ModProposalFormProps> = ({ onSubmit }) =>
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             placeholder="Describe what this mod does..."
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            className={
+              [
+                'w-full px-3 py-2',
+                'border-4 border-[#595B65]',
+                'rounded-none',
+                'bg-[#010100]',
+                'text-[#E1E0E1]',
+                'focus:border-[#E1E0E1]',
+                'focus:outline-none',
+                'text-base',
+                'shadow-none',
+                'disabled:bg-[#222]'
+              ].join(' ')
+            }
+            style={{
+              caretColor: '#E1E0E1',
+              textShadow: '2px 2px 0 #393938',
+            }}
             required
           />
         </div>
