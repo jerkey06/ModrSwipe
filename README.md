@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./public/logos/ModrSwipe_logo.png" alt="ModrSwipe Logo" width="200"/>
+  <img src="./public/logos/ModrSwipe_logo.png" alt="ModrSwipe Logo" width="600"/>
   <p>
     Decide on your next game mods with a fun, real-time swiping experience.
   </p>
