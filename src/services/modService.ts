@@ -14,7 +14,8 @@ import {
   validateModData, 
   handleFirebaseError, 
   safeGetObject, 
-  ValidationError 
+  ValidationError,
+  withRetry 
 } from '../utils/validation';
 
 // Type definitions for service parameters
@@ -78,17 +79,23 @@ export const modService: ModServiceInterface = {
       // Validate the constructed mod object
       const validatedMod = validateModData(mod);
 
-      // Guardar en Firestore para persistencia
-      await setDoc(doc(db, 'mods', modId), {
-        ...validatedMod,
-        createdAt: validatedMod.createdAt.toISOString()
-      });
+      // Guardar en Firestore para persistencia con retry
+      await withRetry(
+        () => setDoc(doc(db, 'mods', modId), {
+          ...validatedMod,
+          createdAt: validatedMod.createdAt.toISOString()
+        }),
+        'proposeMod-firestore'
+      );
 
-      // Guardar en Realtime Database para actualizaciones en vivo
-      await set(ref(rtdb, `rooms/${roomId}/mods/${modId}`), {
-        ...validatedMod,
-        createdAt: validatedMod.createdAt.toISOString()
-      });
+      // Guardar en Realtime Database para actualizaciones en vivo con retry
+      await withRetry(
+        () => set(ref(rtdb, `rooms/${roomId}/mods/${modId}`), {
+          ...validatedMod,
+          createdAt: validatedMod.createdAt.toISOString()
+        }),
+        'proposeMod-rtdb'
+      );
 
       return validatedMod;
     } catch (error) {
@@ -162,13 +169,17 @@ export const modService: ModServiceInterface = {
         throw new ValidationError('roomId is required and must be a string');
       }
 
-      const modsQuery = query(
-        collection(db, 'mods'),
-        where('roomId', '==', roomId),
-        orderBy('createdAt', 'asc')
+      const snapshot = await withRetry(
+        () => {
+          const modsQuery = query(
+            collection(db, 'mods'),
+            where('roomId', '==', roomId),
+            orderBy('createdAt', 'asc')
+          );
+          return getDocs(modsQuery);
+        },
+        'getRoomMods'
       );
-      
-      const snapshot = await getDocs(modsQuery);
       const mods: Mod[] = [];
       
       // Safely process each document with validation

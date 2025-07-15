@@ -24,7 +24,8 @@ import {
   validateRoomData, 
   handleFirebaseError, 
   safeGetObject, 
-  ValidationError 
+  ValidationError,
+  withRetry 
 } from '../utils/validation';
 
 // Type definitions for service parameters and responses
@@ -90,11 +91,14 @@ export const roomService: RoomServiceInterface = {
       // Validate the constructed room data
       const validatedRoomData = validateRoomData(roomData);
 
-      // Guardar en Firestore
-      await setDoc(doc(db, 'rooms', roomId), {
-        ...validatedRoomData,
-        createdAt: validatedRoomData.createdAt.toISOString()
-      });
+      // Guardar en Firestore con retry
+      await withRetry(
+        () => setDoc(doc(db, 'rooms', roomId), {
+          ...validatedRoomData,
+          createdAt: validatedRoomData.createdAt.toISOString()
+        }),
+        'createRoom-firestore'
+      );
 
       // Validate and prepare host player data
       const hostPlayerData = {
@@ -104,8 +108,11 @@ export const roomService: RoomServiceInterface = {
         isOnline: true
       };
 
-      // Agregar host como primer jugador en Realtime Database
-      await set(ref(rtdb, `rooms/${roomId}/players/${hostId}`), hostPlayerData);
+      // Agregar host como primer jugador en Realtime Database con retry
+      await withRetry(
+        () => set(ref(rtdb, `rooms/${roomId}/players/${hostId}`), hostPlayerData),
+        'createRoom-rtdb'
+      );
 
       return { roomId, ...validatedRoomData };
     } catch (error) {
@@ -130,9 +137,11 @@ export const roomService: RoomServiceInterface = {
         throw new ValidationError('nickname cannot be empty');
       }
 
-      // Verificar si la sala existe
-      const roomRef = doc(db, 'rooms', roomId);
-      const roomDoc = await getDoc(roomRef);
+      // Verificar si la sala existe con retry
+      const roomDoc = await withRetry(
+        () => getDoc(doc(db, 'rooms', roomId)),
+        'joinRoom-getRoom'
+      );
       
       if (!roomDoc.exists()) {
         throw new ValidationError('Room not found');
@@ -154,8 +163,11 @@ export const roomService: RoomServiceInterface = {
         isOnline: true
       };
 
-      // Agregar jugador a Realtime Database
-      await set(ref(rtdb, `rooms/${roomId}/players/${userId}`), playerData);
+      // Agregar jugador a Realtime Database con retry
+      await withRetry(
+        () => set(ref(rtdb, `rooms/${roomId}/players/${userId}`), playerData),
+        'joinRoom-addPlayer'
+      );
 
       return validatedRoomData;
     } catch (error) {
@@ -237,7 +249,10 @@ export const roomService: RoomServiceInterface = {
         throw new ValidationError('status must be one of: lobby, voting, results');
       }
 
-      await updateDoc(doc(db, 'rooms', roomId), { status });
+      await withRetry(
+        () => updateDoc(doc(db, 'rooms', roomId), { status }),
+        'updateRoomStatus'
+      );
     } catch (error) {
       handleFirebaseError(error, 'updateRoomStatus');
     }
@@ -254,7 +269,10 @@ export const roomService: RoomServiceInterface = {
         throw new ValidationError('userId is required and must be a string');
       }
 
-      await remove(ref(rtdb, `rooms/${roomId}/players/${userId}`));
+      await withRetry(
+        () => remove(ref(rtdb, `rooms/${roomId}/players/${userId}`)),
+        'leaveRoom'
+      );
     } catch (error) {
       handleFirebaseError(error, 'leaveRoom');
     }
