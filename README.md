@@ -1,121 +1,75 @@
-# ModrSwipe
+<div align="center">
+  <img src="./public/logos/ModrSwipe_logo.png" alt="ModrSwipe Logo" width="200"/>
+  <h1>ModrSwipe</h1>
+  <p>
+    Decide on your next game mods with a fun, real-time swiping experience.
+  </p>
+</div>
 
-## Introduction
+---
 
-ModrSwipe is a web application designed to facilitate the process of choosing Minecraft mods for a server or modpack. It provides a collaborative and interactive platform where users can vote on proposed mods in a "swipe-style" interface, similar to popular dating apps. This approach simplifies the decision-making process, making it fun and efficient for a group of players to agree on a mod list.
+**ModrSwipe** is a real-time, collaborative web application designed to help groups of friends democratically decide which game mods to play together. It provides a "Tinder-like" swiping interface for voting on proposed mods, making the decision process fast, fun, and transparent.
 
-The application allows users to create or join rooms, where a designated admin can propose mods. Other members in the room can then vote "yes" or "no" on each mod. The final results are displayed, showing which mods were approved by the group.
+For a detailed explanation of the project's architecture, data models, and service layer, please see the [**Full Technical Documentation](./docs/TECHNICAL_DOCUMENTATION.md)**.
 
-## Features
+## ✨ Key Features
 
-*   **Room Creation & Management:** Create private rooms for your group.
-*   **User Authentication:** Simple player identification system.
-*   **Mod Proposal System:** Admins can propose mods to be voted on.
-*   **Interactive Swiping Interface:** Users vote on mods by swiping left (no) or right (yes).
-*   **Real-time Voting:** See voting progress in real-time.
-*   **Results Page:** View the final list of approved mods.
-*   **Customizable Panorama Background:** Features a Minecraft-style panoramic background.
+- **🚀 Real-Time Rooms:** Create private rooms and invite friends with a unique code.
+- **👥 Live Player List:** See who's online in the lobby.
+- **💡 Mod Proposals:** Any member can propose mods for the group to vote on.
+- **↔️ Swipe to Vote:** A fun, intuitive swiping interface for "Like" (right) or "Pass" (left).
+- **📊 Live Results:** Instantly see which mods won the vote once the session ends.
 
-## Tech Stack
+## 🚀 Getting Started
 
-This project is built with a modern web development stack:
-
-*   **Frontend:** [React](https://react.dev/) with [Vite](https://vitejs.dev/)
-*   **Language:** [TypeScript](https://www.typescriptlang.org/)
-*   **Styling:** [Tailwind CSS](https://tailwindcss.com/) with `clsx` and `tailwind-merge` for utility class management.
-*   **State Management:** [Zustand](https://zustand-demo.pmnd.rs/) for lightweight global state management.
-*   **Routing:** [React Router](https://reactrouter.com/) for client-side routing.
-*   **Backend & Database:** [Firebase](https://firebase.google.com/) (Firestore, Realtime Database, or other services) for room management, voting, and user data.
-*   **Animations:** [Framer Motion](https://www.framer.com/motion/) and [React Spring](https://www.react-spring.dev/) for UI animations.
-*   **3D Rendering:** [Three.js](https://threejs.org/) for the panoramic background.
-
-## Project Structure
-
-The project follows a component-based architecture, with a clear separation of concerns.
-
-```
-/
-├── public/              # Static assets (images, fonts)
-├── src/
-│   ├── components/      # Reusable UI components
-│   │   ├── features/    # Components related to specific app features
-│   │   ├── layout/      # Layout components (e.g., Panorama, main Layout)
-│   │   └── ui/          # Generic, reusable UI elements (Button, Card)
-│   ├── config/          # Configuration files (e.g., Firebase)
-│   ├── hooks/           # Custom React hooks
-│   ├── pages/           # Top-level page components for each route
-│   ├── services/        # Business logic and API interactions (Firebase services)
-│   ├── store/           # Zustand store for global state
-│   ├── types/           # TypeScript type definitions
-│   └── utils/           # Utility functions
-├── .gitignore           # Git ignore file
-├── index.html           # Main HTML entry point
-├── package.json         # Project dependencies and scripts
-└── vite.config.ts       # Vite configuration
-```
-
-## Getting Started
-
-Follow these instructions to get a local copy of the project up and running for development and testing purposes.
+Follow these instructions to get a local copy of the project up and running.
 
 ### Prerequisites
 
-*   [Node.js](https://nodejs.org/) (v18 or later recommended)
-*   [npm](https://www.npmjs.com/) or a compatible package manager
-*   A [Firebase](https://firebase.google.com/) project
+- [Node.js](https://nodejs.org/) (v18 or newer)
+- [NPM](https://www.npmjs.com/)
+- A Firebase project
 
-### Installation
+### Installation & Setup
 
 1.  **Clone the repository:**
-    ```sh
+    ```bash
     git clone https://github.com/your-username/ModrSwipe.git
     cd ModrSwipe
     ```
 
 2.  **Install dependencies:**
-    ```sh
+    ```bash
     npm install
     ```
 
-3.  **Configure Firebase:**
-    *   Navigate to `src/config/`.
-    *   You will find a `firebase.js` file. This file is set up to initialize Firebase, but you need to provide your own project credentials.
-    *   Replace the placeholder configuration object with your Firebase project's configuration. You can get this from the Firebase console (`Project Settings > General > Your apps > SDK setup and configuration`).
+3.  **Configure Environment Variables:**
+    Create a `.env.local` file in the project root and add your Firebase project configuration. You can get these from your Firebase project settings.
 
-    ```javascript
-    // src/config/firebase.js
-    import { initializeApp } from "firebase/app";
-
-    // TODO: Replace with your app's Firebase project configuration
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    export default app;
+    ```env
+    VITE_FIREBASE_API_KEY=your-api-key
+    VITE_FIREBASE_AUTH_DOMAIN=your-auth-domain
+    VITE_FIREBASE_DATABASE_URL=your-database-url
+    VITE_FIREBASE_PROJECT_ID=your-project-id
+    VITE_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+    VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+    VITE_FIREBASE_APP_ID=your-app-id
     ```
 
-### Running the Application
+4.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
+    The application should now be running on `http://localhost:5173`.
 
-Once the installation and configuration are complete, you can run the development server:
+### Available Scripts
 
-```sh
-npm run dev
-```
+- `npm run dev`: Starts the development server.
+- `npm run build`: Builds the app for production.
+- `npm run lint`: Lints the code using ESLint.
+- `npm run test`: Runs the unit tests with Vitest.
+- `npm run preview`: Serves the production build locally.
 
-This will start the Vite development server, and you can view the application by navigating to `http://localhost:5173` (or the port specified in the console output).
+## 📄 License
 
-## Available Scripts
-
-The `package.json` file includes the following scripts:
-
-*   `npm run dev`: Starts the development server with Hot Module Replacement (HMR).
-*   `npm run build`: Compiles and bundles the application for production into the `dist/` directory.
-*   `npm run lint`: Lints the codebase using ESLint to check for code quality and style issues.
-*   `npm run preview`: Serves the production build locally to preview the final application.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
