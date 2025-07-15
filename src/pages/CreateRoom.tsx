@@ -35,11 +35,11 @@ export const CreateRoom: React.FC = () => {
         nickname: nickname.trim(),
         isAnonymous: user.isAnonymous,
       };
-      
+
       setUser(userData);
 
       const newRoom = await roomService.createRoom(user.uid, nickname.trim());
-      
+
       setRoom({
         ...newRoom,
         isHost: true,
@@ -81,7 +81,7 @@ export const CreateRoom: React.FC = () => {
               >
                 <Users className="w-8 h-8 text-white" />
               </motion.div>
-              
+
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   Room Created!
@@ -90,7 +90,7 @@ export const CreateRoom: React.FC = () => {
                   Share this code with your friends to join
                 </p>
               </div>
-              
+
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-mono font-bold text-green-600">
@@ -105,7 +105,7 @@ export const CreateRoom: React.FC = () => {
                   </Button>
                 </div>
               </div>
-              
+
               <Button
                 size="lg"
                 onClick={handleJoinLobby}
@@ -132,7 +132,7 @@ export const CreateRoom: React.FC = () => {
               Start a new mod voting session
             </p>
           </div>
-          
+
           <form onSubmit={handleCreateRoom} className="space-y-4">
             <Input
               label="Your Nickname"
@@ -142,7 +142,7 @@ export const CreateRoom: React.FC = () => {
               required
               maxLength={20}
             />
-            
+
             <Button
               type="submit"
               size="lg"
