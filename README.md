@@ -9,7 +9,7 @@
 
 **ModrSwipe** is a real-time, collaborative web application designed to help groups of friends democratically decide which game mods to play together. It provides a "Tinder-like" swiping interface for voting on proposed mods, making the decision process fast, fun, and transparent.
 
-For a detailed explanation of the project's architecture, data models, and service layer, please see the [**Full Technical Documentation](./docs/TECHNICAL_DOCUMENTATION.md)**.
+For a detailed explanation of the project's architecture, data models, and service layer, please see the **[Full Technical Documentation](./docs/TECHNICAL_DOCUMENTATION.md)**.
 
 ## ✨ Key Features
 
