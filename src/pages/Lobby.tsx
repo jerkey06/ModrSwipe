@@ -15,25 +15,43 @@ import { Mod } from '../types';
 export const Lobby: React.FC = () => {
   const navigate = useNavigate();
   const { id: roomId } = useParams<{ id: string }>();
-  const { user, room, setRoom, mods, setMods } = useAppStore();
+  const { user, room, setRoom, mods, setMods, isLoading, setLoading } = useAppStore();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!roomId) return;
 
-    const unsubscribePlayers = roomService.onPlayersChanged(roomId, (players) => {
-      setRoom({ ...room!, players });
+    // Set loading states
+    setLoading('room', true);
+    setLoading('mods', true);
+
+    const unsubscribePlayers = roomService.onPlayersChanged(roomId, (players: any) => {
+      // Defensive check: ensure players is an array
+      if (Array.isArray(players) && room) {
+        setRoom({ ...room, players });
+        setLoading('room', false);
+      } else {
+        console.warn('Invalid players data received:', players);
+        setLoading('room', false);
+      }
     });
 
-    const unsubscribeMods = modService.onModsChanged(roomId, (proposedMods) => {
-      setMods({ ...mods, proposed: proposedMods });
+    const unsubscribeMods = modService.onModsChanged(roomId, (proposedMods: any) => {
+      // Defensive check: ensure proposedMods is an array before calling setMods
+      if (Array.isArray(proposedMods)) {
+        setMods(proposedMods);
+      } else {
+        console.warn('Invalid mods data received:', proposedMods);
+        setMods([]); // Provide safe fallback
+      }
+      setLoading('mods', false);
     });
 
     return () => {
       unsubscribePlayers();
       unsubscribeMods();
     };
-  }, [roomId, setRoom, setMods]);
+  }, [roomId, room, setRoom, setMods, setLoading]);
 
   const handleCopyRoomCode = async () => {
     if (roomId) {
@@ -54,7 +72,8 @@ export const Lobby: React.FC = () => {
   };
 
   const handleStartVoting = async () => {
-    if (mods.proposed.length > 0 && roomId) {
+    // Defensive check: ensure mods.proposed exists and is an array before checking length
+    if (mods?.proposed && Array.isArray(mods.proposed) && mods.proposed.length > 0 && roomId) {
       try {
         await roomService.updateRoomStatus(roomId, 'swiping');
         navigate(`/room/${roomId}/swipe`);
@@ -102,7 +121,7 @@ export const Lobby: React.FC = () => {
                   variant="primary"
                   size="sm"
                   onClick={handleStartVoting}
-                  disabled={mods.proposed.length === 0}
+                  disabled={!mods?.proposed || !Array.isArray(mods.proposed) || mods.proposed.length === 0}
                 >
                   <Play className="w-4 h-4 mr-2" />
                   Start Voting
@@ -115,11 +134,19 @@ export const Lobby: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Players */}
           <div className="lg:col-span-1">
-            <PlayerList 
-              players={room.players} 
-              hostId={room.hostId}
-              currentUserId={user.uid}
-            />
+            {isLoading.room ? (
+              <Card>
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Loading players...</p>
+                </div>
+              </Card>
+            ) : (
+              <PlayerList 
+                players={room.players || []} 
+                hostId={room.hostId}
+                currentUserId={user.uid}
+              />
+            )}
           </div>
 
           {/* Middle Column - Mod Proposal */}
@@ -131,9 +158,13 @@ export const Lobby: React.FC = () => {
           <div className="lg:col-span-1">
             <Card>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Proposed Mods ({mods.proposed.length})
+                Proposed Mods ({mods?.proposed && Array.isArray(mods.proposed) ? mods.proposed.length : 0})
               </h3>
-              {mods.proposed.length === 0 ? (
+              {isLoading.mods ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Loading mods...</p>
+                </div>
+              ) : !mods?.proposed || !Array.isArray(mods.proposed) || mods.proposed.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">
                   No mods proposed yet. Be the first to suggest one!
                 </p>
@@ -141,18 +172,18 @@ export const Lobby: React.FC = () => {
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   {mods.proposed.map((mod, index) => (
                     <motion.div
-                      key={mod.id}
+                      key={mod?.id || `mod-${index}`}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                       className="bg-gray-50 rounded-lg p-4"
                     >
-                      <h4 className="font-medium text-gray-900">{mod.name}</h4>
+                      <h4 className="font-medium text-gray-900">{mod?.name || 'Unnamed Mod'}</h4>
                       <p className="text-sm text-gray-600 mt-1">
-                        {mod.description}
+                        {mod?.description || 'No description provided'}
                       </p>
                       <p className="text-xs text-gray-500 mt-2">
-                        by {mod.proposedBy}
+                        by {mod?.proposedBy || 'Unknown'}
                       </p>
                     </motion.div>
                   ))}
