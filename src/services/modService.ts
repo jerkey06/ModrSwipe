@@ -10,6 +10,12 @@ import {
 } from 'firebase/firestore';
 import { ref, set, onValue, off, push } from 'firebase/database';
 import { Mod } from '../types';
+import { 
+  validateModData, 
+  handleFirebaseError, 
+  safeGetObject, 
+  ValidationError 
+} from '../utils/validation';
 
 // Type definitions for service parameters
 export interface ModData {
@@ -29,62 +35,126 @@ export const modService: ModServiceInterface = {
   // Proponer nuevo mod
   async proposeMod(roomId: string, userId: string, modData: ModData): Promise<Mod> {
     try {
+      // Validate input parameters
+      if (!roomId || typeof roomId !== 'string') {
+        throw new ValidationError('roomId is required and must be a string');
+      }
+      if (!userId || typeof userId !== 'string') {
+        throw new ValidationError('userId is required and must be a string');
+      }
+      if (!modData || typeof modData !== 'object') {
+        throw new ValidationError('modData is required and must be an object');
+      }
+      if (!modData.name || typeof modData.name !== 'string') {
+        throw new ValidationError('modData.name is required and must be a string');
+      }
+      if (!modData.description || typeof modData.description !== 'string') {
+        throw new ValidationError('modData.description is required and must be a string');
+      }
+      if (modData.url && typeof modData.url !== 'string') {
+        throw new ValidationError('modData.url must be a string if provided');
+      }
+      if (modData.image && typeof modData.image !== 'string') {
+        throw new ValidationError('modData.image must be a string if provided');
+      }
+
       const modId = push(ref(rtdb, `rooms/${roomId}/mods`)).key;
       
       if (!modId) {
-        throw new Error('Failed to generate mod ID');
+        throw new ValidationError('Failed to generate mod ID');
       }
       
       const mod: Mod = {
         id: modId,
         roomId,
-        name: modData.name,
-        url: modData.url,
-        description: modData.description,
-        image: modData.image || undefined,
+        name: modData.name.trim(),
+        url: modData.url?.trim() || undefined,
+        description: modData.description.trim(),
+        image: modData.image?.trim() || undefined,
         proposedBy: userId,
         createdAt: new Date()
       };
 
+      // Validate the constructed mod object
+      const validatedMod = validateModData(mod);
+
       // Guardar en Firestore para persistencia
       await setDoc(doc(db, 'mods', modId), {
-        ...mod,
-        createdAt: mod.createdAt.toISOString()
+        ...validatedMod,
+        createdAt: validatedMod.createdAt.toISOString()
       });
 
       // Guardar en Realtime Database para actualizaciones en vivo
       await set(ref(rtdb, `rooms/${roomId}/mods/${modId}`), {
-        ...mod,
-        createdAt: mod.createdAt.toISOString()
+        ...validatedMod,
+        createdAt: validatedMod.createdAt.toISOString()
       });
 
-      return mod;
+      return validatedMod;
     } catch (error) {
-      console.error('Error proposing mod:', error);
-      throw error;
+      handleFirebaseError(error, 'proposeMod');
     }
   },
 
   // Escuchar cambios en mods propuestos
   onModsChanged(roomId: string, callback: (mods: Mod[]) => void): () => void {
-    const modsRef = ref(rtdb, `rooms/${roomId}/mods`);
-    
-    const unsubscribe = onValue(modsRef, (snapshot) => {
-      const modsData = snapshot.val() || {};
-      const mods: Mod[] = Object.entries(modsData).map(([id, data]: [string, any]) => ({
-        id,
-        ...data,
-        createdAt: new Date(data.createdAt)
-      }));
-      callback(mods);
-    });
-    
-    return () => off(modsRef);
+    try {
+      // Validate input parameters
+      if (!roomId || typeof roomId !== 'string') {
+        throw new ValidationError('roomId is required and must be a string');
+      }
+      if (!callback || typeof callback !== 'function') {
+        throw new ValidationError('callback is required and must be a function');
+      }
+
+      const modsRef = ref(rtdb, `rooms/${roomId}/mods`);
+      
+      const unsubscribe = onValue(modsRef, (snapshot) => {
+        try {
+          const modsData = safeGetObject(snapshot.val(), {});
+          const mods: Mod[] = [];
+          
+          // Safely process each mod entry with validation
+          Object.entries(modsData).forEach(([id, data]: [string, any]) => {
+            try {
+              const modWithId = { id, ...data };
+              const validatedMod = validateModData(modWithId);
+              mods.push(validatedMod);
+            } catch (validationError) {
+              console.warn(`Invalid mod data for ID ${id}:`, validationError);
+              // Continue processing other mods instead of failing completely
+            }
+          });
+          
+          // Always call callback with validated array (even if empty)
+          callback(mods);
+        } catch (error) {
+          console.error('Error processing mods data:', error);
+          // Provide fallback empty array to prevent UI crashes
+          callback([]);
+        }
+      }, (error) => {
+        console.error('Firebase listener error for mods:', error);
+        // Provide fallback empty array on Firebase errors
+        callback([]);
+      });
+      
+      return () => off(modsRef);
+    } catch (error) {
+      console.error('Error setting up mods listener:', error);
+      // Return a no-op cleanup function if setup fails
+      return () => {};
+    }
   },
 
   // Obtener mods de una sala
   async getRoomMods(roomId: string): Promise<Mod[]> {
     try {
+      // Validate input parameters
+      if (!roomId || typeof roomId !== 'string') {
+        throw new ValidationError('roomId is required and must be a string');
+      }
+
       const modsQuery = query(
         collection(db, 'mods'),
         where('roomId', '==', roomId),
@@ -92,17 +162,24 @@ export const modService: ModServiceInterface = {
       );
       
       const snapshot = await getDocs(modsQuery);
-      return snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: new Date(data.createdAt)
-        } as Mod;
+      const mods: Mod[] = [];
+      
+      // Safely process each document with validation
+      snapshot.docs.forEach(doc => {
+        try {
+          const data = doc.data();
+          const modWithId = { id: doc.id, ...data };
+          const validatedMod = validateModData(modWithId);
+          mods.push(validatedMod);
+        } catch (validationError) {
+          console.warn(`Invalid mod data for document ${doc.id}:`, validationError);
+          // Continue processing other mods instead of failing completely
+        }
       });
+      
+      return mods;
     } catch (error) {
-      console.error('Error getting room mods:', error);
-      throw error;
+      handleFirebaseError(error, 'getRoomMods');
     }
   }
 };

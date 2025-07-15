@@ -19,6 +19,13 @@ import {
   remove 
 } from 'firebase/database';
 import { Room, User } from '../types';
+import { 
+  validatePlayerData, 
+  validateRoomData, 
+  handleFirebaseError, 
+  safeGetObject, 
+  ValidationError 
+} from '../utils/validation';
 
 // Type definitions for service parameters and responses
 export interface RoomSettings {
@@ -55,6 +62,17 @@ export const roomService: RoomServiceInterface = {
   // Crear nueva sala
   async createRoom(hostId: string, hostNickname: string): Promise<{ roomId: string } & RoomData> {
     try {
+      // Validate input parameters
+      if (!hostId || typeof hostId !== 'string') {
+        throw new ValidationError('hostId is required and must be a string');
+      }
+      if (!hostNickname || typeof hostNickname !== 'string') {
+        throw new ValidationError('hostNickname is required and must be a string');
+      }
+      if (hostNickname.trim().length === 0) {
+        throw new ValidationError('hostNickname cannot be empty');
+      }
+
       const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
       
       const roomData: RoomData = {
@@ -69,91 +87,169 @@ export const roomService: RoomServiceInterface = {
         }
       };
 
+      // Validate the constructed room data
+      const validatedRoomData = validateRoomData(roomData);
+
       // Guardar en Firestore
       await setDoc(doc(db, 'rooms', roomId), {
-        ...roomData,
-        createdAt: roomData.createdAt.toISOString()
+        ...validatedRoomData,
+        createdAt: validatedRoomData.createdAt.toISOString()
       });
 
-      // Agregar host como primer jugador en Realtime Database
-      await set(ref(rtdb, `rooms/${roomId}/players/${hostId}`), {
-        nickname: hostNickname,
+      // Validate and prepare host player data
+      const hostPlayerData = {
+        nickname: hostNickname.trim(),
         isHost: true,
         joinedAt: new Date().toISOString(),
         isOnline: true
-      });
+      };
 
-      return { roomId, ...roomData };
+      // Agregar host como primer jugador en Realtime Database
+      await set(ref(rtdb, `rooms/${roomId}/players/${hostId}`), hostPlayerData);
+
+      return { roomId, ...validatedRoomData };
     } catch (error) {
-      console.error('Error creating room:', error);
-      throw error;
+      handleFirebaseError(error, 'createRoom');
     }
   },
 
   // Unirse a sala
   async joinRoom(roomId: string, userId: string, nickname: string): Promise<RoomData> {
     try {
+      // Validate input parameters
+      if (!roomId || typeof roomId !== 'string') {
+        throw new ValidationError('roomId is required and must be a string');
+      }
+      if (!userId || typeof userId !== 'string') {
+        throw new ValidationError('userId is required and must be a string');
+      }
+      if (!nickname || typeof nickname !== 'string') {
+        throw new ValidationError('nickname is required and must be a string');
+      }
+      if (nickname.trim().length === 0) {
+        throw new ValidationError('nickname cannot be empty');
+      }
+
       // Verificar si la sala existe
       const roomRef = doc(db, 'rooms', roomId);
       const roomDoc = await getDoc(roomRef);
       
       if (!roomDoc.exists()) {
-        throw new Error('Room not found');
+        throw new ValidationError('Room not found');
       }
 
-      // Agregar jugador a Realtime Database
-      await set(ref(rtdb, `rooms/${roomId}/players/${userId}`), {
-        nickname,
+      const roomData = roomDoc.data();
+      if (!roomData) {
+        throw new ValidationError('Room data is invalid');
+      }
+
+      // Validate room data before proceeding
+      const validatedRoomData = validateRoomData({ id: roomId, ...roomData });
+
+      // Validate and prepare player data
+      const playerData = {
+        nickname: nickname.trim(),
         isHost: false,
         joinedAt: new Date().toISOString(),
         isOnline: true
-      });
+      };
 
-      const data = roomDoc.data();
-      return {
-        ...data,
-        createdAt: new Date(data.createdAt)
-      } as RoomData;
+      // Agregar jugador a Realtime Database
+      await set(ref(rtdb, `rooms/${roomId}/players/${userId}`), playerData);
+
+      return validatedRoomData;
     } catch (error) {
-      console.error('Error joining room:', error);
-      throw error;
+      handleFirebaseError(error, 'joinRoom');
     }
   },
 
   // Escuchar cambios en jugadores
   onPlayersChanged(roomId: string, callback: (players: Player[]) => void): () => void {
-    const playersRef = ref(rtdb, `rooms/${roomId}/players`);
-    
-    const unsubscribe = onValue(playersRef, (snapshot) => {
-      const playersData = snapshot.val() || {};
-      const players: Player[] = Object.entries(playersData).map(([id, data]: [string, any]) => ({
-        id,
-        ...data,
-        joinedAt: new Date(data.joinedAt)
-      }));
-      callback(players);
-    });
-    
-    return () => off(playersRef);
+    try {
+      // Validate input parameters
+      if (!roomId || typeof roomId !== 'string') {
+        throw new ValidationError('roomId is required and must be a string');
+      }
+      if (!callback || typeof callback !== 'function') {
+        throw new ValidationError('callback is required and must be a function');
+      }
+
+      const playersRef = ref(rtdb, `rooms/${roomId}/players`);
+      
+      const unsubscribe = onValue(playersRef, (snapshot) => {
+        try {
+          const playersData = safeGetObject(snapshot.val(), {});
+          const players: Player[] = [];
+          
+          // Safely process each player entry with validation
+          Object.entries(playersData).forEach(([id, data]: [string, any]) => {
+            try {
+              const validatedPlayer = validatePlayerData(data, id);
+              players.push({
+                id,
+                nickname: validatedPlayer.nickname,
+                isHost: validatedPlayer.isHost,
+                joinedAt: validatedPlayer.joinedAt,
+                isOnline: validatedPlayer.isOnline
+              });
+            } catch (validationError) {
+              console.warn(`Invalid player data for ID ${id}:`, validationError);
+              // Continue processing other players instead of failing completely
+            }
+          });
+          
+          // Always call callback with validated array (even if empty)
+          callback(players);
+        } catch (error) {
+          console.error('Error processing players data:', error);
+          // Provide fallback empty array to prevent UI crashes
+          callback([]);
+        }
+      }, (error) => {
+        console.error('Firebase listener error for players:', error);
+        // Provide fallback empty array on Firebase errors
+        callback([]);
+      });
+      
+      return () => off(playersRef);
+    } catch (error) {
+      console.error('Error setting up players listener:', error);
+      // Return a no-op cleanup function if setup fails
+      return () => {};
+    }
   },
 
   // Actualizar estado de sala
   async updateRoomStatus(roomId: string, status: 'lobby' | 'voting' | 'results'): Promise<void> {
     try {
+      // Validate input parameters
+      if (!roomId || typeof roomId !== 'string') {
+        throw new ValidationError('roomId is required and must be a string');
+      }
+      if (!status || !['lobby', 'voting', 'results'].includes(status)) {
+        throw new ValidationError('status must be one of: lobby, voting, results');
+      }
+
       await updateDoc(doc(db, 'rooms', roomId), { status });
     } catch (error) {
-      console.error('Error updating room status:', error);
-      throw error;
+      handleFirebaseError(error, 'updateRoomStatus');
     }
   },
 
   // Salir de sala
   async leaveRoom(roomId: string, userId: string): Promise<void> {
     try {
+      // Validate input parameters
+      if (!roomId || typeof roomId !== 'string') {
+        throw new ValidationError('roomId is required and must be a string');
+      }
+      if (!userId || typeof userId !== 'string') {
+        throw new ValidationError('userId is required and must be a string');
+      }
+
       await remove(ref(rtdb, `rooms/${roomId}/players/${userId}`));
     } catch (error) {
-      console.error('Error leaving room:', error);
-      throw error;
+      handleFirebaseError(error, 'leaveRoom');
     }
   }
 };
