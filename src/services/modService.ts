@@ -100,22 +100,23 @@ export const modService: ModServiceInterface = {
       return validatedMod;
     } catch (error) {
       handleFirebaseError(error, 'proposeMod');
+      throw error;
     }
   },
 
   // Escuchar cambios en mods propuestos
   onModsChanged(roomId: string, callback: (mods: Mod[]) => void): () => void {
-    try {
-      // Validate input parameters
-      if (!roomId || typeof roomId !== 'string') {
-        throw new ValidationError('roomId is required and must be a string');
-      }
-      if (!callback || typeof callback !== 'function') {
-        throw new ValidationError('callback is required and must be a function');
-      }
+    // Validate input parameters
+    if (!roomId || typeof roomId !== 'string') {
+      throw new ValidationError('roomId is required and must be a string');
+    }
+    if (!callback || typeof callback !== 'function') {
+      throw new ValidationError('callback is required and must be a function');
+    }
 
-      const modsRef = ref(rtdb, `rooms/${roomId}/mods`);
-      
+    const modsRef = ref(rtdb, `rooms/${roomId}/mods`);
+
+    try {
       const unsubscribe = onValue(modsRef, (snapshot) => {
         try {
           const modsData = safeGetObject(snapshot.val(), {});

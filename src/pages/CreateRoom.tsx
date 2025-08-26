@@ -17,11 +17,13 @@ export const CreateRoom: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nickname.trim()) return;
 
+    setError(null); // Clear previous errors
     setIsCreating(true);
 
     try {
@@ -50,7 +52,7 @@ export const CreateRoom: React.FC = () => {
       setRoomCode(newRoom.roomId);
     } catch (error) {
       console.error("Error creating room:", error);
-      // Aquí podrías mostrar un mensaje de error al usuario
+      setError('Failed to create room. Please check your connection and try again.');
     } finally {
       setIsCreating(false);
     }
@@ -142,6 +144,12 @@ export const CreateRoom: React.FC = () => {
               required
               maxLength={20}
             />
+
+            {error && (
+              <p className="text-sm text-red-600 text-center">
+                {error}
+              </p>
+            )}
 
             <Button
               type="submit"
