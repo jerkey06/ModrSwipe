@@ -46,12 +46,10 @@ export const Lobby: React.FC = () => {
             // Defensive check: ensure players is an array
             if (Array.isArray(players)) {
               // Update room with new players data, preserving existing room data
-              setRoom((currentRoom) => {
-                if (currentRoom) {
-                  return { ...currentRoom, players };
-                }
-                return currentRoom;
-              });
+              const currentRoom = useAppStore.getState().room;
+              if (currentRoom) {
+                setRoom({ ...currentRoom, players });
+              }
               setLoading('room', false);
               clearError(); // Clear any previous errors
             } else {
