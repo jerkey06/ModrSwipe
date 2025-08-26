@@ -172,7 +172,8 @@ export const Lobby: React.FC = () => {
     // Defensive check: ensure mods.proposed exists and is an array before checking length
     if (mods?.proposed && Array.isArray(mods.proposed) && mods.proposed.length > 0 && roomId) {
       try {
-        await roomService.updateRoomStatus(roomId, 'swiping');
+        // Update the room status to 'voting' to begin the swiping phase
+        await roomService.updateRoomStatus(roomId, 'voting');
         navigate(`/room/${roomId}/swipe`);
       } catch (error) {
         console.error("Error starting voting:", error);

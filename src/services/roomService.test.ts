@@ -92,6 +92,9 @@ describe('roomService - Firebase Error Scenarios', () => {
         .mockResolvedValueOnce(undefined) // First call (Firestore) succeeds
         .mockRejectedValueOnce(new Error('RTDB write failed')); // Second call (RTDB) fails
 
+      const { deleteDoc } = await import('firebase/firestore');
+      vi.mocked(deleteDoc).mockResolvedValue(undefined);
+
       await expect(roomService.createRoom('host1', 'TestHost'))
         .rejects.toThrow('RTDB write failed');
     });

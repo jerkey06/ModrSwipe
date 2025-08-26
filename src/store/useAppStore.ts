@@ -62,7 +62,16 @@ export const useAppStore = create<AppState>((set) => ({
       return;
     }
     
-    set({ user });
+    if (user) {
+      const sanitizedUser: User = {
+        uid: user.uid,
+        nickname: user.nickname,
+        isAnonymous: user.isAnonymous,
+      };
+      set({ user: sanitizedUser });
+    } else {
+      set({ user: null });
+    }
   },
   
   // Enhanced setRoom with defensive programming

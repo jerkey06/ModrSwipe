@@ -52,9 +52,16 @@ export const validateModData = (data: any): Mod => {
 
   // Validate and parse createdAt
   let createdAt: Date;
+  const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
   if (data.createdAt instanceof Date) {
+    if (isNaN(data.createdAt.getTime())) {
+      throw new ValidationError('Invalid mod data: createdAt must be a valid date', 'createdAt');
+    }
     createdAt = data.createdAt;
   } else if (typeof data.createdAt === 'string') {
+    if (!iso8601Regex.test(data.createdAt)) {
+      throw new ValidationError('Invalid mod data: createdAt must be a valid ISO 8601 string', 'createdAt');
+    }
     createdAt = new Date(data.createdAt);
     if (isNaN(createdAt.getTime())) {
       throw new ValidationError('Invalid mod data: createdAt must be a valid date', 'createdAt');
@@ -94,9 +101,16 @@ export const validatePlayerData = (data: any, playerId: string): User & { isHost
 
   // Validate and parse joinedAt
   let joinedAt: Date;
+  const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
   if (data.joinedAt instanceof Date) {
+    if (isNaN(data.joinedAt.getTime())) {
+      throw new ValidationError('Invalid player data: joinedAt must be a valid date', 'joinedAt');
+    }
     joinedAt = data.joinedAt;
   } else if (typeof data.joinedAt === 'string') {
+    if (!iso8601Regex.test(data.joinedAt)) {
+      throw new ValidationError('Invalid player data: joinedAt must be a valid ISO 8601 string', 'joinedAt');
+    }
     joinedAt = new Date(data.joinedAt);
     if (isNaN(joinedAt.getTime())) {
       throw new ValidationError('Invalid player data: joinedAt must be a valid date', 'joinedAt');
@@ -134,9 +148,16 @@ export const validateRoomData = (data: any): any => {
 
   // Validate and parse createdAt
   let createdAt: Date;
+  const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
   if (data.createdAt instanceof Date) {
+    if (isNaN(data.createdAt.getTime())) {
+      throw new ValidationError('Invalid room data: createdAt must be a valid date', 'createdAt');
+    }
     createdAt = data.createdAt;
   } else if (typeof data.createdAt === 'string') {
+    if (!iso8601Regex.test(data.createdAt)) {
+      throw new ValidationError('Invalid room data: createdAt must be a valid ISO 8601 string', 'createdAt');
+    }
     createdAt = new Date(data.createdAt);
     if (isNaN(createdAt.getTime())) {
       throw new ValidationError('Invalid room data: createdAt must be a valid date', 'createdAt');
