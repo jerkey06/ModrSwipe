@@ -91,32 +91,45 @@ export const roomService: RoomServiceInterface = {
       // Validate the constructed room data
       const validatedRoomData = validateRoomData(roomData);
 
+      const roomRef = doc(db, 'rooms', roomId);
       // Guardar en Firestore con retry
       await withRetry(
-        () => setDoc(doc(db, 'rooms', roomId), {
+        () => setDoc(roomRef, {
           ...validatedRoomData,
           createdAt: validatedRoomData.createdAt.toISOString()
         }),
         'createRoom-firestore'
       );
 
-      // Validate and prepare host player data
-      const hostPlayerData = {
-        nickname: hostNickname.trim(),
-        isHost: true,
-        joinedAt: new Date().toISOString(),
-        isOnline: true
-      };
+      try {
+        // Validate and prepare host player data
+        const hostPlayerData = {
+          nickname: hostNickname.trim(),
+          isHost: true,
+          joinedAt: new Date().toISOString(),
+          isOnline: true
+        };
 
-      // Agregar host como primer jugador en Realtime Database con retry
-      await withRetry(
-        () => set(ref(rtdb, `rooms/${roomId}/players/${hostId}`), hostPlayerData),
-        'createRoom-rtdb'
-      );
+        // Agregar host como primer jugador en Realtime Database con retry
+        await withRetry(
+          () => set(ref(rtdb, `rooms/${roomId}/players/${hostId}`), hostPlayerData),
+          'createRoom-rtdb'
+        );
+      } catch (rtdbError) {
+        // Si falla la escritura en RTDB, eliminar el documento de Firestore para rollback
+        console.error('RTDB write failed, rolling back Firestore document:', rtdbError);
+        await deleteDoc(roomRef).catch(rollbackError => {
+          // Loguear el error de rollback, pero el error original es más importante
+          console.error('Failed to rollback Firestore document:', rollbackError);
+        });
+        // relanzar el error original de RTDB
+        throw rtdbError;
+      }
 
       return { roomId, ...validatedRoomData };
     } catch (error) {
       handleFirebaseError(error, 'createRoom');
+      throw error;
     }
   },
 
@@ -177,17 +190,17 @@ export const roomService: RoomServiceInterface = {
 
   // Escuchar cambios en jugadores
   onPlayersChanged(roomId: string, callback: (players: Player[]) => void): () => void {
-    try {
-      // Validate input parameters
-      if (!roomId || typeof roomId !== 'string') {
-        throw new ValidationError('roomId is required and must be a string');
-      }
-      if (!callback || typeof callback !== 'function') {
-        throw new ValidationError('callback is required and must be a function');
-      }
+    // Validate input parameters
+    if (!roomId || typeof roomId !== 'string') {
+      throw new ValidationError('roomId is required and must be a string');
+    }
+    if (!callback || typeof callback !== 'function') {
+      throw new ValidationError('callback is required and must be a function');
+    }
 
-      const playersRef = ref(rtdb, `rooms/${roomId}/players`);
-      
+    const playersRef = ref(rtdb, `rooms/${roomId}/players`);
+
+    try {
       const unsubscribe = onValue(playersRef, (snapshot) => {
         try {
           const playersData = safeGetObject(snapshot.val(), {});

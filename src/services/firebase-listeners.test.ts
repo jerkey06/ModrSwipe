@@ -56,9 +56,9 @@ describe('Firebase Listeners - Defensive Programming', () => {
       // Setup listener with faulty callback
       const cleanup = roomService.onPlayersChanged('room1', faultyCallback);
       
-      // Simulate Firebase data update - should not crash despite callback error
+      // Simulate Firebase data update - it should throw an error, but not crash the listener
       const mockSnapshot = { val: () => ({}) };
-      expect(() => listenerCallback!(mockSnapshot)).not.toThrow();
+      expect(() => listenerCallback!(mockSnapshot)).toThrow('Callback processing error');
       
       // Cleanup should still work
       expect(() => cleanup()).not.toThrow();
